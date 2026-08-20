@@ -28,10 +28,10 @@ export async function POST(req: Request) {
   try {
     const ai = await answerWithProviders(question, context, aiSettings)
     if (!ai) return NextResponse.json({
-      answer: sources.length ? 'Đã tìm thấy dữ liệu trong Second Brain nhưng bạn chưa thêm API key AI. Hãy bấm ⚙ AI để thêm Gemini, OpenAI hoặc Groq.' : 'Bạn chưa thêm API key AI và Second Brain hiện chưa có dữ liệu.',
+      answer: sources.length ? 'Đã tìm thấy dữ liệu trong Second Brain nhưng bạn chưa thêm API key AI. Hãy bấm ⚙ AI để thêm Gemini, OpenAI, Groq, Grok, Claude hoặc provider khác.' : 'Bạn chưa thêm API key AI và Second Brain hiện chưa có dữ liệu.',
       sources
     })
-    return NextResponse.json({ answer: ai.text, sources, usedProvider: ai.provider, usedModel: ai.model })
+    return NextResponse.json({ answer: ai.text, sources, usedProvider: ai.provider, usedModel: ai.model, usedAccount: ai.accountName })
   } catch (e: any) {
     return NextResponse.json({ error: `Tất cả AI provider đều lỗi: ${e?.message || 'Không xác định'}`, sources }, { status: 502 })
   }

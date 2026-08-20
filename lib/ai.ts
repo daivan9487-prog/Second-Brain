@@ -1,114 +1,72 @@
-export type ProviderId = 'gemini' | 'openai' | 'groq'
-
-export type ProviderConfig = {
-  id: ProviderId
-  enabled?: boolean
-  apiKey?: string
-  model?: string
-}
-
-export type AISettingsPayload = {
-  activeProvider?: ProviderId | 'auto'
-  autoRotate?: boolean
-  providers?: ProviderConfig[]
-}
+export type ProviderType = 'gemini' | 'openai' | 'groq' | 'xai' | 'anthropic' | 'openrouter' | 'deepseek' | 'mistral' | 'custom'
+export type ProviderAccount = { id:string, provider:ProviderType, name?:string, enabled?:boolean, apiKey?:string, model?:string, baseUrl?:string, priority?:number }
+export type AISettingsPayload = { activeAccount?: 'auto' | string, autoRotate?: boolean, accounts?: ProviderAccount[] }
 
 function buildPrompt(question: string, context: string) {
   return `Bạn là AI của Second Brain cá nhân. Trả lời bằng tiếng Việt.\n\nNGUYÊN TẮC:\n- Ưu tiên tuyệt đối dữ liệu trong CONTEXT.\n- Nếu context không đủ, nói rõ phần nào chưa có trong bộ nhớ.\n- Không bịa nguồn.\n- Cuối câu trả lời, liệt kê nguồn theo [1], [2]... nếu có.\n\nCONTEXT:\n${context || '(Không tìm thấy dữ liệu phù hợp trong Second Brain)'}\n\nCÂU HỎI:\n${question}`
 }
 
-async function callGemini(apiKey: string, model: string, prompt: string) {
-  const cleanModel = model.replace(/^models\//, '')
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cleanModel)}:generateContent`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
-  })
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`)
-  const data = await res.json()
-  return (data.candidates?.[0]?.content?.parts || []).map((p: any) => p.text || '').join('\n').trim()
+async function readJsonOrText(res: Response) { const t=await res.text(); try{return JSON.parse(t)}catch{return {raw:t}} }
+
+async function callGemini(key:string, model:string, prompt:string) {
+  const m=model.replace(/^models\//,'')
+  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}]})})
+  const d=await readJsonOrText(res); if(!res.ok) throw new Error(`Gemini ${res.status}: ${d.error?.message||d.raw||'API error'}`)
+  return (d.candidates?.[0]?.content?.parts||[]).map((p:any)=>p.text||'').join('\n').trim()
 }
 
-async function callOpenAI(apiKey: string, model: string, prompt: string) {
-  const res = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, input: prompt, store: false })
-  })
-  if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`)
-  const data = await res.json()
-  if (data.output_text) return String(data.output_text).trim()
-  const parts = (data.output || []).flatMap((item: any) => item.content || [])
-  return parts.map((p: any) => p.text || '').filter(Boolean).join('\n').trim()
+async function callOpenAIResponses(key:string, model:string, prompt:string) {
+  const res=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model,input:prompt,store:false})})
+  const d=await readJsonOrText(res); if(!res.ok) throw new Error(`OpenAI ${res.status}: ${d.error?.message||d.raw||'API error'}`)
+  if(d.output_text) return String(d.output_text).trim(); return (d.output||[]).flatMap((i:any)=>i.content||[]).map((p:any)=>p.text||'').filter(Boolean).join('\n').trim()
 }
 
-async function callGroq(apiKey: string, model: string, prompt: string) {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }] })
-  })
-  if (!res.ok) throw new Error(`Groq ${res.status}: ${await res.text()}`)
-  const data = await res.json()
-  return String(data.choices?.[0]?.message?.content || '').trim()
+async function callAnthropic(key:string, model:string, prompt:string) {
+  const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},body:JSON.stringify({model,max_tokens:4096,messages:[{role:'user',content:prompt}]})})
+  const d=await readJsonOrText(res); if(!res.ok) throw new Error(`Anthropic ${res.status}: ${d.error?.message||d.raw||'API error'}`)
+  return (d.content||[]).map((x:any)=>x.text||'').filter(Boolean).join('\n').trim()
 }
 
-export async function answerWithProviders(question: string, context: string, settings?: AISettingsPayload) {
-  const prompt = buildPrompt(question, context)
-  const providers = (settings?.providers || []).filter(p => p.enabled !== false && p.apiKey?.trim())
-  if (!providers.length) return null
+function compatibleBase(provider:ProviderType, custom?:string) {
+  if(provider==='groq') return 'https://api.groq.com/openai/v1'
+  if(provider==='xai') return 'https://api.x.ai/v1'
+  if(provider==='openrouter') return 'https://openrouter.ai/api/v1'
+  if(provider==='deepseek') return 'https://api.deepseek.com/v1'
+  if(provider==='mistral') return 'https://api.mistral.ai/v1'
+  return (custom||'').replace(/\/$/,'')
+}
+async function callCompatible(provider:ProviderType,key:string,model:string,prompt:string,baseUrl?:string) {
+  const base=compatibleBase(provider,baseUrl); if(!base) throw new Error('Custom API chưa có Base URL.')
+  const res=await fetch(`${base}/chat/completions`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model,messages:[{role:'user',content:prompt}]})})
+  const d=await readJsonOrText(res); if(!res.ok) throw new Error(`${provider} ${res.status}: ${d.error?.message||d.message||d.raw||'API error'}`)
+  return String(d.choices?.[0]?.message?.content||'').trim()
+}
 
-  const active = settings?.activeProvider || 'auto'
-  let ordered = providers
-  if (active !== 'auto') ordered = [...providers].sort((a, b) => a.id === active ? -1 : b.id === active ? 1 : 0)
-  if (settings?.autoRotate === false) ordered = ordered.slice(0, 1)
+export function defaultModel(p:ProviderType) {
+  return ({gemini:'gemini-3.5-flash',openai:'gpt-5.6',groq:'openai/gpt-oss-20b',xai:'grok-4.5',anthropic:'claude-sonnet-5',openrouter:'anthropic/claude-sonnet-5',deepseek:'deepseek-chat',mistral:'mistral-large-latest',custom:'your-model'} as Record<ProviderType,string>)[p]
+}
 
-  const errors: string[] = []
-  for (const p of ordered) {
-    const key = p.apiKey!.trim()
-    const model = (p.model || '').trim() || defaultModel(p.id)
-    try {
-      let text = ''
-      if (p.id === 'gemini') text = await callGemini(key, model, prompt)
-      if (p.id === 'openai') text = await callOpenAI(key, model, prompt)
-      if (p.id === 'groq') text = await callGroq(key, model, prompt)
-      if (text) return { text, provider: p.id, model }
-      errors.push(`${p.id}: không có nội dung trả về`)
-    } catch (e: any) {
-      errors.push(e?.message || `${p.id}: lỗi không xác định`)
-    }
+function orderedAccounts(settings?:AISettingsPayload) {
+  let a=(settings?.accounts||[]).filter(x=>x.enabled!==false&&x.apiKey?.trim()).sort((x,y)=>(x.priority??100)-(y.priority??100))
+  if(settings?.activeAccount&&settings.activeAccount!=='auto') a=[...a].sort((x,y)=>x.id===settings.activeAccount?-1:y.id===settings.activeAccount?1:0)
+  if(settings?.autoRotate===false) a=a.slice(0,1)
+  return a
+}
+
+export async function answerWithProviders(question:string, context:string, settings?:AISettingsPayload) {
+  const prompt=buildPrompt(question,context), accounts=orderedAccounts(settings); if(!accounts.length) return null
+  const errors:string[]=[]
+  for(const a of accounts){ const key=a.apiKey!.trim(), model=(a.model||'').trim()||defaultModel(a.provider)
+    try { let text=''; if(a.provider==='gemini') text=await callGemini(key,model,prompt); else if(a.provider==='openai') text=await callOpenAIResponses(key,model,prompt); else if(a.provider==='anthropic') text=await callAnthropic(key,model,prompt); else text=await callCompatible(a.provider,key,model,prompt,a.baseUrl)
+      if(text) return {text,provider:a.provider,model,accountId:a.id,accountName:a.name||a.id}; errors.push(`${a.name||a.provider}: không có nội dung trả về`) }
+    catch(e:any){ errors.push(`${a.name||a.provider}: ${e?.message||'lỗi không xác định'}`) }
   }
-  throw new Error(errors.join(' | ') || 'Không có provider AI khả dụng.')
+  throw new Error(errors.join(' | ')||'Không có tài khoản AI khả dụng.')
 }
 
-export function defaultModel(id: ProviderId) {
-  if (id === 'gemini') return 'gemini-2.5-flash'
-  if (id === 'openai') return 'gpt-5.6'
-  return 'openai/gpt-oss-20b'
-}
-
-export async function createEmbeddingWithSettings(text: string, settings?: AISettingsPayload): Promise<number[] | null> {
-  const providers = settings?.providers || []
-  const openai = providers.find(p => p.id === 'openai' && p.enabled !== false && p.apiKey?.trim())
-  if (openai) {
-    const res = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openai.apiKey!.trim()}` },
-      body: JSON.stringify({ model: 'text-embedding-3-small', input: text, dimensions: 1536 })
-    })
-    if (res.ok) return (await res.json()).data?.[0]?.embedding ?? null
-  }
-
-  const gemini = providers.find(p => p.id === 'gemini' && p.enabled !== false && p.apiKey?.trim())
-  if (gemini) {
-    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': gemini.apiKey!.trim() },
-      body: JSON.stringify({
-        model: 'models/gemini-embedding-001',
-        content: { parts: [{ text }] },
-        embedContentConfig: { outputDimensionality: 1536 }
-      })
-    })
-    if (res.ok) return (await res.json()).embedding?.values ?? null
-  }
+export async function createEmbeddingWithSettings(text:string, settings?:AISettingsPayload):Promise<number[]|null> {
+  const accounts=orderedAccounts({...settings,autoRotate:true})
+  for(const a of accounts.filter(x=>x.provider==='openai')) { try { const r=await fetch('https://api.openai.com/v1/embeddings',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${a.apiKey!.trim()}`},body:JSON.stringify({model:'text-embedding-3-small',input:text,dimensions:1536})}); if(r.ok)return (await r.json()).data?.[0]?.embedding??null }catch{} }
+  for(const a of accounts.filter(x=>x.provider==='gemini')) { try { const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':a.apiKey!.trim()},body:JSON.stringify({model:'models/gemini-embedding-001',content:{parts:[{text}]},embedContentConfig:{outputDimensionality:1536}})}); if(r.ok)return (await r.json()).embedding?.values??null }catch{} }
   return null
 }

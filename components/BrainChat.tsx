@@ -10,7 +10,7 @@ export default function BrainChat() {
   const [configured, setConfigured] = useState(0)
   const [msgs, setMsgs] = useState<Msg[]>([{ role:'brain', text:'Xin chào. Hãy hỏi tôi về bất kỳ kiến thức nào bạn đã lưu trong Second Brain.' }])
 
-  function refreshConfigured(){ setConfigured(loadAISettings().providers.filter(p=>p.enabled && p.apiKey.trim()).length) }
+  function refreshConfigured(){ setConfigured(loadAISettings().accounts.filter(p=>p.enabled && p.apiKey.trim()).length) }
   useEffect(()=>{ refreshConfigured(); window.addEventListener('second-brain-ai-settings', refreshConfigured); return()=>window.removeEventListener('second-brain-ai-settings', refreshConfigured) },[])
 
   async function ask() {
@@ -27,7 +27,7 @@ export default function BrainChat() {
   }
 
   return <section className="chatCard">
-    <div className="sectionTitle"><div><span className="eyebrow">AI MEMORY</span><h2>Trò chuyện với Bộ Não Thứ 2</h2></div><div className="chatActions"><span className={`pill ${configured ? 'ok' : ''}`}>{configured ? `${configured} AI đã cấu hình` : 'Chưa có AI key'}</span><AISettings/></div></div>
+    <div className="sectionTitle"><div><span className="eyebrow">AI MEMORY</span><h2>Trò chuyện với Bộ Não Thứ 2</h2></div><div className="chatActions"><span className={`pill ${configured ? 'ok' : ''}`}>{configured ? `${configured} tài khoản AI` : 'Chưa có AI key'}</span><AISettings/></div></div>
     <div className="chatLog">{msgs.map((m,i) => <div key={i} className={`msg ${m.role}`}><div className="avatar">{m.role==='brain'?'∞':'Y'}</div><div><p>{m.text}</p>{m.provider && <div className="modelUsed">↳ {m.provider.toUpperCase()} · {m.model}</div>}{m.sources?.length ? <div className="sources">{m.sources.slice(0,4).map((s,j)=><span key={j}>[{j+1}] {s.title || 'Knowledge'}</span>)}</div>:null}</div></div>)}</div>
     <div className="composer"><textarea value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ask()}}} placeholder="Hỏi: Tôi đã học gì về React? Lần trước tôi xử lý lỗi Vercel thế nào?..." rows={2}/><button onClick={ask}>{busy?'…':'➜'}</button></div>
   </section>

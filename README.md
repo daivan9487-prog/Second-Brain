@@ -1,41 +1,33 @@
-# Second Brain v0.3 — Brain Map + Knowledge Tree + Multi AI
+# Second Brain v0.4 — Multi-Account AI Vault
 
-Personal Knowledge OS chạy bằng Next.js + Supabase + pgvector và AI do người dùng nhập trực tiếp trên web.
+Nâng cấp từ v0.3. Giữ nguyên Brain Map 3D, Knowledge Library, Supabase RAG, Backup/Export và bổ sung hệ thống AI đa nhà cung cấp + đa tài khoản.
 
-## Có gì mới ở v0.3
+## AI providers có sẵn
+- Gemini (Google)
+- OpenAI / ChatGPT API
+- Groq
+- Grok (xAI)
+- Claude (Anthropic API)
+- OpenRouter
+- DeepSeek
+- Mistral
+- Custom OpenAI-compatible API
 
-- Brain Map 3D tương tác: xoay, zoom, click node, tìm Category/Topic/Tags/nội dung.
-- Knowledge Tree: Category → Topic → Knowledge.
-- Sửa / xóa Knowledge trực tiếp.
-- Tags và URL nguồn.
-- Tìm kiếm tiếng Việt không dấu.
-- Backup snapshot vào Supabase.
-- Restore backup có xác nhận.
-- Export JSON và Markdown.
-- Giữ Multi-AI v0.2: Gemini / OpenAI / Groq, chọn model và xoay vòng trên web.
+> "Claude Code" là ứng dụng/agent lập trình. Trong Second Brain, Claude được gọi thông qua Anthropic Claude API.
 
-## Nâng cấp từ v0.2
+## Nhiều tài khoản / nhiều API key
+Bấm **⚙ AI** → **+ provider** để tạo thêm Gemini #2, Gemini #3, OpenAI #2, Grok #2… Mỗi tài khoản có:
+- Tên riêng
+- API key riêng
+- Model riêng
+- Priority
+- Bật/tắt
+- Nút test riêng
 
-1. Thay source GitHub bằng source v0.3.
-2. Trong Supabase SQL Editor chạy `supabase/migration-v0.3.sql` đúng 1 lần.
-3. Không cần đổi các ENV Supabase hiện tại.
-4. Push GitHub, Vercel tự deploy lại.
+Khi `Tự chuyển` bật, hệ thống thử lần lượt các tài khoản theo Priority. Nếu một key lỗi/hết quota/429, hệ thống chuyển sang key tiếp theo.
 
-## Cài mới
+## Bảo mật
+AI keys chỉ lưu Local Storage trong trình duyệt hiện tại và được gửi tạm đến API route khi thực hiện request. Không lưu vào Supabase/Vercel. Supabase server credentials vẫn phải nằm trong Vercel Environment Variables.
 
-1. Tạo Supabase project.
-2. Chạy `supabase/schema.sql`.
-3. Trên Vercel thêm các biến trong `.env.example`.
-4. Deploy.
-5. Vào `⚙ AI` trên web và nhập Gemini/OpenAI/Groq API key. API key AI nằm trong trình duyệt, không cần ENV AI trên Vercel.
-
-## Lưu ý bảo mật
-
-Bản MVP sử dụng `SUPABASE_SERVICE_ROLE_KEY` chỉ ở server route. Tuyệt đối không đặt key này trong biến `NEXT_PUBLIC_*` và không commit `.env.local`/`Br2.env` vào GitHub.
-
-## Roadmap gần
-
-- Supabase Auth + owner_id + RLS theo từng tài khoản.
-- Upload PDF/DOCX/TXT/code và tự chunk/index.
-- Semantic links thật giữa các node trong Brain Map.
-- AI chat làm sáng các node nguồn đang được dùng.
+## Nâng cấp từ v0.3
+Không cần migration SQL mới. Chỉ thay source, commit/push GitHub và để Vercel deploy lại.
