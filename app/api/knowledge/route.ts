@@ -5,7 +5,7 @@ import { createEmbeddingWithSettings, type AISettingsPayload } from '@/lib/ai'
 export async function GET() {
   const db = getAdminSupabase()
   if (!db) return NextResponse.json({ configured: false, items: [] })
-  const { data, error } = await db.from('knowledge').select('*').order('created_at', { ascending: false }).limit(50)
+  const { data, error } = await db.from('knowledge').select('*').order('created_at', { ascending: false }).limit(1000)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ configured: true, items: data || [] })
 }
@@ -13,18 +13,23 @@ export async function GET() {
 export async function POST(req: Request) {
   const db = getAdminSupabase()
   if (!db) return NextResponse.json({ error: 'Supabase chưa được cấu hình.' }, { status: 503 })
-  const body = await req.json() as { title?: string, content?: string, category?: string, aiSettings?: AISettingsPayload }
-  const title = String(body.title || '').trim()
-  const content = String(body.content || '').trim()
-  const category = String(body.category || 'General').trim()
+  const body = await req.json() as { title?: string, content?: string, category?: string, topic?: string, tags?: string[], sourceUrl?: string, aiSettings?: AISettingsPayload }
+  const title = String(body.title || '').trim(), content = String(body.content || '').trim(), category = String(body.category || 'General').trim() || 'General'
+  const topic = String(body.topic || '').trim(), tags = Array.isArray(body.tags) ? body.tags.map(String).map(x=>x.trim()).filter(Boolean) : []
+  const source_url = String(body.sourceUrl || '').trim() || null
   if (!title || !content) return NextResponse.json({ error: 'Thiếu tiêu đề hoặc nội dung.' }, { status: 400 })
 
-  const { data: item, error } = await db.from('knowledge').insert({ title, content, category }).select().single()
+  const insert: any = { title, content, category, topic: topic || null, tags, source_url }
+  let { data: item, error } = await db.from('knowledge').insert(insert).select().single()
+  if (error && /topic|tags/i.test(error.message)) {
+    const fallback = { title, content, category, source_url, metadata: { topic, tags } }
+    const r = await db.from('knowledge').insert(fallback).select().single(); item = r.data; error = r.error
+  }
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   try {
-    const embedding = await createEmbeddingWithSettings(`${title}\n${content}`, body.aiSettings)
+    const embedding = await createEmbeddingWithSettings(`${category}\n${topic}\n${title}\n${tags.join(' ')}\n${content}`, body.aiSettings)
     if (embedding) await db.from('knowledge_chunks').insert({ knowledge_id: item.id, chunk_text: content, embedding })
-  } catch { /* Knowledge vẫn được lưu kể cả khi embedding provider lỗi */ }
+  } catch {}
   return NextResponse.json({ item })
 }

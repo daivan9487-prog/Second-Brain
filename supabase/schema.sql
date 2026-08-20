@@ -62,3 +62,17 @@ alter table public.knowledge_chunks enable row level security;
 
 -- MVP dùng Service Role ở server API, vì vậy không mở policy public.
 -- Khi thêm Supabase Auth ở Phase 2, tạo owner_id + RLS theo auth.uid().
+
+-- v0.3 additions
+alter table public.knowledge add column if not exists topic text;
+alter table public.knowledge add column if not exists tags text[] not null default '{}'::text[];
+create index if not exists knowledge_category_idx on public.knowledge(category);
+create index if not exists knowledge_topic_idx on public.knowledge(topic);
+create index if not exists knowledge_tags_gin_idx on public.knowledge using gin(tags);
+create table if not exists public.brain_backups (
+  id uuid primary key default gen_random_uuid(),
+  label text not null default 'Manual backup',
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+alter table public.brain_backups enable row level security;
