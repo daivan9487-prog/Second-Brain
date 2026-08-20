@@ -1,33 +1,50 @@
-# Second Brain v0.4 — Multi-Account AI Vault
+# Second Brain v0.6 — UI Refresh + Simple AI Setup
 
-Nâng cấp từ v0.3. Giữ nguyên Brain Map 3D, Knowledge Library, Supabase RAG, Backup/Export và bổ sung hệ thống AI đa nhà cung cấp + đa tài khoản.
+Bản v0.6 nâng cấp giao diện và trải nghiệm sử dụng từ v0.4, giữ nguyên lõi Knowledge + Brain Map 3D + Supabase RAG + Backup/Export + Multi-AI/Multi-Account.
 
-## AI providers có sẵn
-- Gemini (Google)
+## Điểm mới v0.6
+
+- Dashboard mới: sáng, thoáng, dễ đọc, responsive.
+- 4 giao diện có thể đổi trực tiếp: **Sáng / Neon / Ấm / Midnight**.
+- Trang riêng **AI Models**.
+- Thêm API theo 4 bước: **Chọn Provider → Dán API Key → Chọn Model → Lưu**.
+- Hỗ trợ nhiều tài khoản / nhiều API key cho cùng provider.
+- Bật/tắt từng key, đặt Priority, test từng tài khoản, Smart Routing/fallback.
+- Nút **+ Thêm API** gọn ngay trong AI Brain; quản lý nâng cao ở `/ai-models`.
+- Quick Capture ở sidebar và modal lưu Knowledge mới.
+
+## AI Provider có sẵn
+
+- Gemini
 - OpenAI / ChatGPT API
 - Groq
-- Grok (xAI)
-- Claude (Anthropic API)
+- Grok / xAI
+- Claude / Anthropic
 - OpenRouter
 - DeepSeek
 - Mistral
 - Custom OpenAI-compatible API
 
-> "Claude Code" là ứng dụng/agent lập trình. Trong Second Brain, Claude được gọi thông qua Anthropic Claude API.
+## Dữ liệu và API key
 
-## Nhiều tài khoản / nhiều API key
-Bấm **⚙ AI** → **+ provider** để tạo thêm Gemini #2, Gemini #3, OpenAI #2, Grok #2… Mỗi tài khoản có:
-- Tên riêng
-- API key riêng
-- Model riêng
-- Priority
-- Bật/tắt
-- Nút test riêng
+- Knowledge, backup và vector data: Supabase.
+- AI API key: Local Storage trên trình duyệt hiện tại.
+- API key AI không được ghi vào Supabase hoặc GitHub.
+- Khi gọi AI, key được gửi tạm tới Next.js API route để thực hiện request.
 
-Khi `Tự chuyển` bật, hệ thống thử lần lượt các tài khoản theo Priority. Nếu một key lỗi/hết quota/429, hệ thống chuyển sang key tiếp theo.
+## Deploy
 
-## Bảo mật
-AI keys chỉ lưu Local Storage trong trình duyệt hiện tại và được gửi tạm đến API route khi thực hiện request. Không lưu vào Supabase/Vercel. Supabase server credentials vẫn phải nằm trong Vercel Environment Variables.
+1. Giữ nguyên ENV Supabase của dự án đang chạy.
+2. Nếu đã chạy `supabase/migration-v0.3.sql` thì **v0.6 không cần migration SQL mới**.
+3. Đẩy toàn bộ source v0.6 lên GitHub.
+4. Vercel tự build/deploy lại.
+5. Mở `/ai-models` để thêm API key trực tiếp trên web.
 
-## Nâng cấp từ v0.3
-Không cần migration SQL mới. Chỉ thay source, commit/push GitHub và để Vercel deploy lại.
+## Chạy local
+
+```bash
+npm install
+npm run dev
+```
+
+Yêu cầu Node.js 22+.
