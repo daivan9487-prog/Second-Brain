@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { loadAISettings } from '@/lib/client-ai-settings'
 
 export default function AddKnowledge({ onSaved }: { onSaved?: () => void }) {
   const [open, setOpen] = useState(false)
@@ -10,7 +11,8 @@ export default function AddKnowledge({ onSaved }: { onSaved?: () => void }) {
 
   async function save() {
     setMsg('Đang lưu...')
-    const r = await fetch('/api/knowledge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, content, category }) })
+    const aiSettings = loadAISettings()
+    const r = await fetch('/api/knowledge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, content, category, aiSettings }) })
     const d = await r.json()
     if (!r.ok) return setMsg(d.error || 'Không thể lưu')
     setTitle(''); setContent(''); setMsg('Đã lưu vào Second Brain ✓'); onSaved?.()

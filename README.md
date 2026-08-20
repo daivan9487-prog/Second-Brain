@@ -81,3 +81,17 @@ User
 - Export/backup ZIP + JSON/Markdown.
 - Chế độ “Chỉ dữ liệu của tôi” / “Dữ liệu + AI chung”.
 
+
+
+## v0.2 — Multi AI Provider
+
+- Thêm Gemini, ChatGPT/OpenAI và Groq trực tiếp từ giao diện `⚙ AI`.
+- API key AI được lưu trong Local Storage của trình duyệt, không cần tạo ENV AI trên Vercel.
+- Có nút kiểm tra từng API.
+- Chọn provider ưu tiên hoặc `Tự động / xoay vòng`.
+- Khi bật xoay vòng, nếu provider đầu tiên lỗi/hết quota, hệ thống thử provider tiếp theo.
+- Model là ô nhập tự do, vì danh sách model của các nhà cung cấp thay đổi theo thời gian.
+- RAG embeddings: ưu tiên OpenAI; nếu không có thì dùng Gemini embedding 1536 chiều; Groq hiện dùng cho phần chat.
+
+### Lưu ý bảo mật
+Cách lưu Local Storage phù hợp cho web cá nhân/private. API key không được ghi vào Supabase hoặc Vercel, nhưng vẫn tồn tại trong trình duyệt. Không nên dùng thiết kế này cho website public nhiều người dùng nếu chưa bổ sung đăng nhập, mã hóa secret và vault phía server.

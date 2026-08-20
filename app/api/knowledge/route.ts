@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getAdminSupabase } from '@/lib/supabase'
-import { createEmbedding } from '@/lib/openai'
+import { createEmbeddingWithSettings, type AISettingsPayload } from '@/lib/ai'
 
 export async function GET() {
   const db = getAdminSupabase()
@@ -13,7 +13,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const db = getAdminSupabase()
   if (!db) return NextResponse.json({ error: 'Supabase chưa được cấu hình.' }, { status: 503 })
-  const body = await req.json()
+  const body = await req.json() as { title?: string, content?: string, category?: string, aiSettings?: AISettingsPayload }
   const title = String(body.title || '').trim()
   const content = String(body.content || '').trim()
   const category = String(body.category || 'General').trim()
@@ -23,12 +23,8 @@ export async function POST(req: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   try {
-    const embedding = await createEmbedding(`${title}\n${content}`)
-    if (embedding) {
-      await db.from('knowledge_chunks').insert({ knowledge_id: item.id, chunk_text: content, embedding })
-    }
-  } catch (e) {
-    console.error(e)
-  }
+    const embedding = await createEmbeddingWithSettings(`${title}\n${content}`, body.aiSettings)
+    if (embedding) await db.from('knowledge_chunks').insert({ knowledge_id: item.id, chunk_text: content, embedding })
+  } catch { /* Knowledge vẫn được lưu kể cả khi embedding provider lỗi */ }
   return NextResponse.json({ item })
 }
