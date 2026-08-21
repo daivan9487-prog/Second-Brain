@@ -57,10 +57,12 @@ function migrateLegacy(saved: any): ClientAISettings | null {
   return { activeAccount:'auto', autoRotate:saved.autoRotate !== false, accounts }
 }
 
+function userKey(){if(typeof window==='undefined')return AI_SETTINGS_KEY;const uid=localStorage.getItem('sb_current_user_id');return uid?`${AI_SETTINGS_KEY}:${uid}`:AI_SETTINGS_KEY}
 export function loadAISettings(): ClientAISettings {
   if (typeof window === 'undefined') return defaultAISettings
   try {
-    const raw = localStorage.getItem(AI_SETTINGS_KEY)
+    const key=userKey()
+    const raw = localStorage.getItem(key)
     if (raw) {
       const s = JSON.parse(raw)
       if (Array.isArray(s.accounts)) return { ...defaultAISettings, ...s, accounts:s.accounts }
@@ -68,13 +70,13 @@ export function loadAISettings(): ClientAISettings {
     const legacyRaw = localStorage.getItem(LEGACY_AI_SETTINGS_KEY)
     if (legacyRaw) {
       const migrated = migrateLegacy(JSON.parse(legacyRaw))
-      if (migrated) { localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(migrated)); return migrated }
+      if (migrated) { localStorage.setItem(key, JSON.stringify(migrated)); return migrated }
     }
   } catch {}
   return defaultAISettings
 }
 
 export function saveAISettings(settings: ClientAISettings) {
-  localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(settings))
+  localStorage.setItem(userKey(), JSON.stringify(settings))
   window.dispatchEvent(new Event('second-brain-ai-settings'))
 }

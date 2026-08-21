@@ -1,0 +1,16 @@
+'use client'
+import { createContext,useContext,useEffect,useState } from 'react'
+
+type User={id:string;username:string;role:'admin'|'user';phone?:string|null}
+const AuthContext=createContext<{user:User|null;refresh:()=>Promise<void>}>({user:null,refresh:async()=>{}})
+export const useAuth=()=>useContext(AuthContext)
+export default function AuthGate({children}:{children:React.ReactNode}){
+ const[user,setUser]=useState<User|null>(null),[loading,setLoading]=useState(true),[mode,setMode]=useState<'login'|'register'>('login'),[msg,setMsg]=useState('')
+ const[username,setUsername]=useState(''),[password,setPassword]=useState(''),[phone,setPhone]=useState('')
+ async function refresh(){const d=await fetch('/api/auth/me',{cache:'no-store'}).then(r=>r.json()).catch(()=>({}));setUser(d.user||null);if(d.user?.id)localStorage.setItem('sb_current_user_id',d.user.id);else localStorage.removeItem('sb_current_user_id');setLoading(false)}
+ useEffect(()=>{const last=localStorage.getItem('sb_last_username')||'';setUsername(last);refresh()},[])
+ async function submit(){setMsg('Đang xử lý...');const url=mode==='login'?'/api/auth/login':'/api/auth/register';const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username,password,phone})});const d=await r.json().catch(()=>({}));if(!r.ok){setMsg(d.error||'Không thể đăng nhập.');return}localStorage.setItem('sb_last_username',username);setPassword('');setMsg('');setUser(d.user);if(d.user?.id)localStorage.setItem('sb_current_user_id',d.user.id)}
+ if(loading)return <div className="authLoading">Đang mở Second Brain…</div>
+ if(!user)return <div className="authScreen"><div className="authBrand"><div className="authLogo">∞</div><h1>SECOND BRAIN</h1><p>Personal Knowledge OS</p></div><section className="authCard"><div className="authTabs"><button className={mode==='login'?'active':''} onClick={()=>{setMode('login');setMsg('')}}>Đăng nhập</button><button className={mode==='register'?'active':''} onClick={()=>{setMode('register');setMsg('')}}>Đăng ký</button></div><h2>{mode==='login'?'Chào mừng trở lại':'Tạo tài khoản mới'}</h2><p>{mode==='login'?'Phiên đăng nhập sẽ được ghi nhớ trên trình duyệt này.':'Tên đăng nhập viết liền, không dấu. SĐT không bắt buộc.'}</p><label>Tên đăng nhập<input autoFocus value={username} onChange={e=>setUsername(e.target.value)} placeholder="vd: nguyenvana" autoComplete="username"/></label><label>Mật khẩu<input value={password} onChange={e=>setPassword(e.target.value)} placeholder="Có thể đặt đơn giản như 1" type="password" autoComplete={mode==='login'?'current-password':'new-password'} onKeyDown={e=>{if(e.key==='Enter')submit()}}/></label>{mode==='register'&&<label>SĐT <span>(không bắt buộc)</span><input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="09xxxxxxxx" inputMode="tel"/></label>}<button className="primary authSubmit" onClick={submit}>{mode==='login'?'Đăng nhập':'Đăng ký & vào Second Brain'}</button>{msg&&<div className="authMsg">{msg}</div>}{mode==='login'&&<div className="defaultAdmin"><b>Admin mặc định</b><span>Tài khoản: <strong>Admin</strong> · Mật khẩu: <strong>123</strong></span><small>Nên đổi mật khẩu Admin ngay sau lần đăng nhập đầu tiên.</small></div>}</section></div>
+ return <AuthContext.Provider value={{user,refresh}}>{children}</AuthContext.Provider>
+}

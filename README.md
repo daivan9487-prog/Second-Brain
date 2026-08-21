@@ -1,59 +1,43 @@
-# Second Brain v0.6 — UI Refresh + Simple AI Setup
+# Second Brain v0.6.2 — Account & Admin
 
-Bản v0.6 nâng cấp giao diện và trải nghiệm sử dụng từ v0.4, giữ nguyên lõi Knowledge + Brain Map 3D + Supabase RAG + Backup/Export + Multi-AI/Multi-Account.
+Bản v0.6.2 bổ sung hệ thống tài khoản nhiều người dùng, đăng nhập lâu dài, đăng ký công khai và trang quản trị Admin.
 
-## Điểm mới v0.6
+## Tài khoản quản trị mặc định
 
-- Dashboard mới: sáng, thoáng, dễ đọc, responsive.
-- 4 giao diện có thể đổi trực tiếp: **Sáng / Neon / Ấm / Midnight**.
-- Trang riêng **AI Models**.
-- Thêm API theo 4 bước: **Chọn Provider → Dán API Key → Chọn Model → Lưu**.
-- Hỗ trợ nhiều tài khoản / nhiều API key cho cùng provider.
-- Bật/tắt từng key, đặt Priority, test từng tài khoản, Smart Routing/fallback.
-- Nút **+ Thêm API** gọn ngay trong AI Brain; quản lý nâng cao ở `/ai-models`.
-- Quick Capture ở sidebar và modal lưu Knowledge mới.
+- Username: `Admin`
+- Password: `123`
+- Tài khoản Admin được tạo tự động ở lần đăng nhập đầu tiên, mật khẩu được lưu bằng `scrypt + salt`, không lưu chữ thô.
+- Nên đổi mật khẩu ngay sau lần đăng nhập đầu tiên.
 
-## AI Provider có sẵn
+## Người dùng
 
-- Gemini
-- OpenAI / ChatGPT API
-- Groq
-- Grok / xAI
-- Claude / Anthropic
-- OpenRouter
-- DeepSeek
-- Mistral
-- Custom OpenAI-compatible API
+- Có thể tự đăng ký tại màn hình đăng nhập.
+- Username: viết liền, không dấu; chữ/số/`.`/`_`/`-`.
+- Password: chỉ cần không rỗng, có thể rất đơn giản.
+- SĐT: không bắt buộc.
+- Người dùng có toàn bộ tính năng Knowledge, Notes, Brain Map, AI Models, Projects, Backup/Export.
+- Dữ liệu Knowledge/Notes/Backup được tách riêng theo từng tài khoản.
+- AI API key vẫn chỉ lưu trên trình duyệt và được tách theo user id.
 
-## Dữ liệu và API key
+## Admin
 
-- Knowledge, backup và vector data: Supabase.
-- AI API key: Local Storage trên trình duyệt hiện tại.
-- API key AI không được ghi vào Supabase hoặc GitHub.
-- Khi gọi AI, key được gửi tạm tới Next.js API route để thực hiện request.
+Trang `Quản trị` cho phép:
+- Tạo tài khoản
+- Sửa username / SĐT
+- Khóa / mở khóa
+- Cấp lại mật khẩu
+- Xem thời điểm tạo và lần đăng nhập gần nhất
 
-## Deploy
+## Ghi nhớ đăng nhập
 
-1. Giữ nguyên ENV Supabase của dự án đang chạy.
-2. Nếu đã chạy `supabase/migration-v0.3.sql` thì **v0.6 không cần migration SQL mới**.
-3. Đẩy toàn bộ source v0.6 lên GitHub.
-4. Vercel tự build/deploy lại.
-5. Mở `/ai-models` để thêm API key trực tiếp trên web.
+Second Brain không lưu mật khẩu thô vào LocalStorage. Thay vào đó, server cấp cookie HttpOnly có hạn 180 ngày. Username gần nhất được lưu để điền sẵn. Vì vậy lần sau mở trình duyệt người dùng thường được tự đăng nhập mà không cần nhập lại mật khẩu.
 
-## Chạy local
+## Nâng cấp từ v0.6.1
 
-```bash
-npm install
-npm run dev
-```
+1. Thay source bằng v0.6.2.
+2. Supabase → SQL Editor → chạy `supabase/migration-v0.6.2.sql`.
+3. Giữ nguyên ENV cũ. Có thể thêm `AUTH_SECRET` dài/ngẫu nhiên để ký session; nếu bỏ trống app dùng `SUPABASE_SERVICE_ROLE_KEY` làm secret dự phòng.
+4. Deploy lại Vercel.
+5. Đăng nhập lần đầu bằng `Admin / 123`; server sẽ tạo Admin và tự gán dữ liệu cũ chưa có owner cho Admin.
 
-Yêu cầu Node.js 22+.
-
-## v0.6.1 — Knowledge-first
-- Kho Tri Thức đứng đầu sidebar, trên Tổng quan.
-- Form Lưu Tri Thức luôn mở; không cần bấm `+ Lưu kiến thức`.
-- Thứ tự nhập: Nội dung → Tiêu đề → Topic → Category → Tag → Nguồn.
-- Chỉ cần Tiêu đề hoặc Nội dung; ngày giờ tạo tự lưu bằng Supabase.
-- Danh sách kiến thức compact luôn mở, có sửa/xóa và tìm kiếm.
-- Thêm tab Ghi chú cho điều cần nhớ/lịch hẹn.
-- Chạy `supabase/migration-v0.6.1.sql` một lần để tạo `quick_notes`.
+> Không commit `.env` hoặc secret lên GitHub.
