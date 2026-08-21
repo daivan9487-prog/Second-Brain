@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import { loadAISettings } from '@/lib/client-ai-settings'
 
 type Props = { onSaved?: () => void; inline?: boolean }
 export default function AddKnowledge({ onSaved, inline=false }: Props) {
@@ -9,7 +8,7 @@ export default function AddKnowledge({ onSaved, inline=false }: Props) {
     if(!title.trim()&&!content.trim()) return setMsg('Nhập tiêu đề hoặc nội dung để lưu.')
     setSaving(true);setMsg('Đang lưu…')
     try{
-      const r=await fetch('/api/knowledge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,content,category,topic,tags:tags.split(',').map(x=>x.trim()).filter(Boolean),sourceUrl,aiSettings:loadAISettings()})})
+      const r=await fetch('/api/knowledge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,content,category,topic,tags:tags.split(',').map(x=>x.trim()).filter(Boolean),sourceUrl})})
       const d=await r.json(); if(!r.ok) return setMsg(d.error||'Không thể lưu')
       setTitle('');setContent('');setTopic('');setTags('');setSourceUrl('');setMsg('Đã lưu ✓');onSaved?.();setTimeout(()=>setMsg(''),1800)
     } finally {setSaving(false)}
