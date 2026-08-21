@@ -14,10 +14,11 @@ export async function POST(req: Request) {
   const db = getAdminSupabase()
   if (!db) return NextResponse.json({ error: 'Supabase chưa được cấu hình.' }, { status: 503 })
   const body = await req.json() as { title?: string, content?: string, category?: string, topic?: string, tags?: string[], sourceUrl?: string, aiSettings?: AISettingsPayload }
-  const title = String(body.title || '').trim(), content = String(body.content || '').trim(), category = String(body.category || 'General').trim() || 'General'
+  const rawTitle = String(body.title || '').trim(), content = String(body.content || '').trim(), category = String(body.category || 'General').trim() || 'General'
+  const title = rawTitle || content.slice(0, 80).trim() || 'Kiến thức không tiêu đề'
   const topic = String(body.topic || '').trim(), tags = Array.isArray(body.tags) ? body.tags.map(String).map(x=>x.trim()).filter(Boolean) : []
   const source_url = String(body.sourceUrl || '').trim() || null
-  if (!title || !content) return NextResponse.json({ error: 'Thiếu tiêu đề hoặc nội dung.' }, { status: 400 })
+  if (!title && !content) return NextResponse.json({ error: 'Hãy nhập tiêu đề hoặc nội dung.' }, { status: 400 })
 
   const insert: any = { title, content, category, topic: topic || null, tags, source_url }
   let { data: item, error } = await db.from('knowledge').insert(insert).select().single()
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
 
   try {
     const embedding = await createEmbeddingWithSettings(`${category}\n${topic}\n${title}\n${tags.join(' ')}\n${content}`, body.aiSettings)
-    if (embedding) await db.from('knowledge_chunks').insert({ knowledge_id: item.id, chunk_text: content, embedding })
+    if (embedding) await db.from('knowledge_chunks').insert({ knowledge_id: item.id, chunk_text: content || title, embedding })
   } catch {}
   return NextResponse.json({ item })
 }

@@ -48,3 +48,12 @@ npm run dev
 ```
 
 Yêu cầu Node.js 22+.
+
+## v0.6.1 — Knowledge-first
+- Kho Tri Thức đứng đầu sidebar, trên Tổng quan.
+- Form Lưu Tri Thức luôn mở; không cần bấm `+ Lưu kiến thức`.
+- Thứ tự nhập: Nội dung → Tiêu đề → Topic → Category → Tag → Nguồn.
+- Chỉ cần Tiêu đề hoặc Nội dung; ngày giờ tạo tự lưu bằng Supabase.
+- Danh sách kiến thức compact luôn mở, có sửa/xóa và tìm kiếm.
+- Thêm tab Ghi chú cho điều cần nhớ/lịch hẹn.
+- Chạy `supabase/migration-v0.6.1.sql` một lần để tạo `quick_notes`.

@@ -11,7 +11,8 @@ export async function POST(req:Request){
  const db=getAdminSupabase(); if(!db) return NextResponse.json({error:'Supabase chưa được cấu hình.'},{status:503})
  const b=await req.json().catch(()=>({})); const {data:knowledge,error:kerr}=await db.from('knowledge').select('*').order('created_at',{ascending:true})
  if(kerr) return NextResponse.json({error:kerr.message},{status:500})
- const {data,error}=await db.from('brain_backups').insert({label:String(b.label||'Manual backup'),payload:{knowledge:knowledge||[]}}).select('id,label,created_at').single()
+ const {data:quickNotes}=await db.from('quick_notes').select('*').order('created_at',{ascending:true})
+ const {data,error}=await db.from('brain_backups').insert({label:String(b.label||'Manual backup'),payload:{knowledge:knowledge||[],quick_notes:quickNotes||[]}}).select('id,label,created_at').single()
  if(error) return NextResponse.json({error:error.message,hint:'Hãy chạy migration v0.3.'},{status:500})
  return NextResponse.json({ok:true,backup:data,count:knowledge?.length||0})
 }
@@ -22,5 +23,8 @@ export async function PUT(req:Request){
  const rows=Array.isArray(data?.payload?.knowledge)?data.payload.knowledge:[]
  const {error:delErr}=await db.from('knowledge').delete().neq('id','00000000-0000-0000-0000-000000000000'); if(delErr) return NextResponse.json({error:delErr.message},{status:500})
  if(rows.length){const clean=rows.map((x:any)=>{const y={...x}; delete y.project; return y}); const {error:insErr}=await db.from('knowledge').insert(clean); if(insErr) return NextResponse.json({error:insErr.message},{status:500})}
- return NextResponse.json({ok:true,count:rows.length})
+ const quickRows=Array.isArray(data?.payload?.quick_notes)?data.payload.quick_notes:[]
+ await db.from('quick_notes').delete().neq('id','00000000-0000-0000-0000-000000000000')
+ if(quickRows.length) await db.from('quick_notes').insert(quickRows)
+ return NextResponse.json({ok:true,count:rows.length,quickNotes:quickRows.length})
 }
